@@ -17,7 +17,7 @@ app.add_middleware(
 
 # 🌐 Khai báo mật khẩu riêng ra để mã hóa ký tự đặc biệt (@)
 username = "lekhanh230893_db_user"
-password = "1JWuq0REXGoWLbJy" 
+password = "1234567890qwertyuiop" 
 
 # Sử dụng quote_plus để biến dấu @ thành định dạng mã hóa an toàn (%40)
 escaped_password = urllib.parse.quote_plus(password)
