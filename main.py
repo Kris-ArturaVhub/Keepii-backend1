@@ -15,7 +15,7 @@ app.add_middleware(
 )
 
 # 🌐 CHÈN CHUỖI KẾT NỐI MONGODB CỦA BẠN VÀO ĐÂY
-MONGO_URI = "mongodb+srv://lekhanh230893_db_user:<db_password>@cluster0.mcyknsl.mongodb.net/?appName=Cluster0"
+MONGO_URI = "mongodb+srv://lekhanh230893_db_user:L3ch1kh@nhM@cluster0.mcyknsl.mongodb.net/?appName=Cluster0"
 client = MongoClient(MONGO_URI)
 db = client["KeepiiDatabase"]
 users_collection = db["Users"]
