@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+import urllib.parse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from pymongo import MongoClient
@@ -14,12 +15,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 🌐 CHÈN CHUỖI KẾT NỐI MONGODB CỦA BẠN VÀO ĐÂY
-MONGO_URI = "mongodb+srv://lekhanh230893_db_user:L3ch1kh@nhM@cluster0.mcyknsl.mongodb.net/?appName=Cluster0"
+# 🌐 Khai báo mật khẩu riêng ra để mã hóa ký tự đặc biệt (@)
+username = "lekhanh230893_db_user"
+password = "L3ch1kh@nhM" 
+
+# Sử dụng quote_plus để biến dấu @ thành định dạng mã hóa an toàn (%40)
+escaped_password = urllib.parse.quote_plus(password)
+
+# Ghép vào chuỗi kết nối chuẩn
+MONGO_URI = f"mongodb+srv://{username}:{escaped_password}@cluster0.mcyknsl.mongodb.net/?appName=Cluster0"
+
 client = MongoClient(MONGO_URI)
 db = client["KeepiiDatabase"]
 users_collection = db["Users"]
-
 class AccountModel(BaseModel):
     nickname: str
     password: str
