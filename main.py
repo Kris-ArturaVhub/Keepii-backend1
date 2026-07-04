@@ -3,6 +3,10 @@ import urllib.parse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from pymongo import MongoClient
+import json
+from fastapi import Request
+from pydantic import BaseModel
+
 
 app = FastAPI()
 
@@ -57,3 +61,39 @@ def signin(data: AccountModel):
     else:
         return {"success": False, "message": "Sai nickname hoặc mật khẩu ❌"}
                                       
+
+class NoteModel(BaseModel):
+    nickname: str
+    content: str
+
+# 1. Cổng nhận dữ liệu lưu tự động thông thường (Fetch)
+@app.post("/api/save-note")
+def save_note(data: NoteModel):
+    db["Users"].update_one(
+        {"nickname": data.nickname},
+        {"$set": {"note_content": data.content}},
+        upsert=True
+    )
+    return {"success": True, "message": "Đã lưu"}
+
+# 2. Cổng khẩn cấp tiếp nhận dữ liệu từ sendBeacon khi tắt app/reload
+@app.post("/api/save-note-beacon")
+async def save_note_beacon(request: Request):
+    # sendBeacon gửi dữ liệu dưới dạng text thuần JSON, cần đọc bằng request.body()
+    body = await request.body()
+    data = json.loads(body.decode("utf-8"))
+    
+    db["Users"].update_one(
+        {"nickname": data["nickname"]},
+        {"$set": {"note_content": data["content"]}},
+        upsert=True
+    )
+    return {"success": True}
+
+# 3. Cổng trả dữ liệu về khi người dùng vừa mở/reload lại trang
+@app.get("/api/get-note")
+def get_note(nickname: str):
+    user = db["Users"].find_one({"nickname": nickname})
+    if user and "note_content" in user:
+        return {"success": True, "content": user["note_content"]}
+    return {"success": True, "content": ""}
