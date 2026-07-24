@@ -1,16 +1,13 @@
-from fastapi import FastAPI
-import urllib.parse
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from pymongo import MongoClient
+import urllib.parse
 import json
-from fastapi import Request
-from pydantic import BaseModel
-
 
 app = FastAPI()
 
-# Cấu hình CORS toàn cầu
+# 🌐 Cấu hình CORS toàn cầu (Giúp Frontend gửi data không bị chặn)[span_4](start_span)[span_4](end_span)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -19,81 +16,108 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 🌐 Khai báo mật khẩu riêng ra để mã hóa ký tự đặc biệt (@)
+# 🔑 Cấu hình kết nối MongoDB Atlas[span_5](start_span)[span_5](end_span)
 username = "lekhanh230893_db_user"
-password = "my_pasw" 
+password = "1234567890qwertyuiop"  # 👈 Bạn điền lại mật khẩu thật của bạn vào đây nhé[span_6](start_span)[span_6](end_span)
 
-# Sử dụng quote_plus để biến dấu @ thành định dạng mã hóa an toàn (%40)
-escaped_password = urllib.parse.quote_plus(password)
+escaped_password = urllib.parse.quote_plus(password)[span_7](start_span)[span_7](end_span)
+MONGO_URI = f"mongodb+srv://{username}:{escaped_password}@cluster0.mcyknsl.mongodb.net/?appName=Cluster0[span_8](start_span)"[span_8](end_span)
 
-# Ghép vào chuỗi kết nối chuẩn
-MONGO_URI = f"mongodb+srv://{username}:{escaped_password}@cluster0.mcyknsl.mongodb.net/?appName=Cluster0"
+client = MongoClient(MONGO_URI)[span_9](start_span)[span_9](end_span)
+db = client["KeepiiDatabase"][span_10](start_span)[span_10](end_span)
+users_collection = db["Users"][span_11](start_span)[span_11](end_span)
 
-client = MongoClient(MONGO_URI)
-db = client["KeepiiDatabase"]
-users_collection = db["Users"]
+
+# ==========================================
+# 1. MODEL DỮ LIỆU (PYDANTIC)[span_12](start_span)[span_12](end_span)
+# ==========================================
 class AccountModel(BaseModel):
     nickname: str
     password: str
 
+class UserDataModel(BaseModel):
+    nickname: str
+    notes: list = []        # Mảng chứa các ghi chú vuông[span_13](start_span)[span_13](end_span)
+    inf_text: str = ""      # Chuỗi chứa văn bản vô hạn[span_14](start_span)[span_14](end_span)
+
+
+# ==========================================
+# 2. KHU VỰC ĐĂNG KÝ & ĐĂNG NHẬP (GIỮ NGUYÊN)[span_15](start_span)[span_15](end_span)
+# ==========================================
 @app.get("/")
 def home():
-    return {"status": "Server Keepii Cloud đang chạy online ổn định! 🚀"}
+    return {"status": "Server Keepii Cloud đang chạy online ổn định! 🚀"}[span_16](start_span)[span_16](end_span)
 
-# 📝 1. CỔNG XỬ LÝ ĐĂNG KÝ
 @app.post("/api/signup")
 def signup(data: AccountModel):
-    existing_user = users_collection.find_one({"nickname": data.nickname})
+    existing_user = users_collection.find_one({"nickname": data.nickname})[span_17](start_span)[span_17](end_span)
     if existing_user:
-        return {"success": False, "message": "Nickname đã tồn tại trên toàn cầu! 🛑"}
+        return {"success": False, "message": "Nickname đã tồn tại trên toàn cầu! 🛑"}[span_18](start_span)[span_18](end_span)
     
-    users_collection.insert_one({"nickname": data.nickname, "password": data.password})
-    return {"success": True, "message": "Đăng ký tài khoản thành công! 🎉"}
+    users_collection.insert_one({"nickname": data.nickname, "password": data.password})[span_19](start_span)[span_19](end_span)
+    return {"success": True, "message": "Đăng ký tài khoản thành công! 🎉"}[span_20](start_span)[span_20](end_span)
 
-# 🔑 2. CỔNG XỬ LÝ ĐĂNG NHẬP (MỚI THÊM)
 @app.post("/api/signin")
 def signin(data: AccountModel):
-    # Tìm tài khoản trên MongoDB Atlas theo Nickname và Mật khẩu
-    user = users_collection.find_one({"nickname": data.nickname, "password": data.password})
-    
+    user = users_collection.find_one({"nickname": data.nickname, "password": data.password})[span_21](start_span)[span_21](end_span)
     if user:
-        return {"success": True, "message": "Đăng nhập thành công! 🔓"}
+        return {"success": True, "message": "Đăng nhập thành công! 🔓"}[span_22](start_span)[span_22](end_span)
     else:
-        return {"success": False, "message": "Sai nickname hoặc mật khẩu ❌"}
-                                      
+        return {"success": False, "message": "Sai nickname hoặc mật khẩu ❌"}[span_23](start_span)[span_23](end_span)
 
-class NoteModel(BaseModel):
-    nickname: str
-    content: str
 
-# 1. Cổng nhận dữ liệu lưu tự động thông thường (Fetch)
-@app.post("/api/save-note")
-def save_note(data: NoteModel):
-    db["Users"].update_one(
-        {"nickname": data.nickname},
-        {"$set": {"note_content": data.content}},
-        upsert=True
-    )
-    return {"success": True, "message": "Đã lưu"}
+# ==========================================
+# 3. KHU VỰC ĐỒNG BỘ GHI CHÚ MỚI (TƯƠNG THÍCH FRONTEND)[span_24](start_span)[span_24](end_span)
+# ==========================================
 
-# 2. Cổng khẩn cấp tiếp nhận dữ liệu từ sendBeacon khi tắt app/reload
-@app.post("/api/save-note-beacon")
-async def save_note_beacon(request: Request):
-    # sendBeacon gửi dữ liệu dưới dạng text thuần JSON, cần đọc bằng request.body()
-    body = await request.body()
-    data = json.loads(body.decode("utf-8"))
-    
-    db["Users"].update_one(
-        {"nickname": data["nickname"]},
-        {"$set": {"note_content": data["content"]}},
-        upsert=True
-    )
-    return {"success": True}
+# 📝 A. API Lưu dữ liệu thông thường (Fetch tự động mỗi 3s)[span_25](start_span)[span_25](end_span)
+@app.post("/api/save_user_data")
+def save_user_data(data: UserDataModel):
+    try:
+        users_collection.update_one(
+            {"nickname": data.nickname},
+            {"$set": {
+                "notes": data.notes,
+                "inf_text": data.inf_text
+            }},
+            upsert=True
+        )
+        return {"success": True, "message": "Đã đồng bộ lên MongoDB Atlas thành công!"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
 
-# 3. Cổng trả dữ liệu về khi người dùng vừa mở/reload lại trang
-@app.get("/api/get-note")
-def get_note(nickname: str):
-    user = db["Users"].find_one({"nickname": nickname})
-    if user and "note_content" in user:
-        return {"success": True, "content": user["note_content"]}
-    return {"success": True, "content": ""}
+# 🚨 B. API Khẩn cấp (Nhận dữ liệu từ sendBeacon khi tắt tab/reload)[span_26](start_span)[span_26](end_span)[span_27](start_span)[span_27](end_span)
+@app.post("/api/save_user_data_beacon")
+async def save_user_data_beacon(request: Request):
+    try:
+        body = await request.body()[span_28](start_span)[span_28](end_span)
+        data = json.loads(body.decode("utf-8"))[span_29](start_span)[span_29](end_span)
+        
+        users_collection.update_one(
+            {"nickname": data.get("nickname")},
+            {"$set": {
+                "notes": data.get("notes", []),
+                "inf_text": data.get("inf_text", "")
+            }},
+            upsert=True
+        )
+        return {"success": True}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+# 🔄 C. API Lấy lại dữ liệu khi User vừa mở App[span_30](start_span)[span_30](end_span)
+@app.post("/api/get_user_data")
+def get_user_data(data: dict):
+    try:
+        nickname = data.get("nickname")
+        user = users_collection.find_one({"nickname": nickname}, {"_id": 0})
+        
+        if user:
+            return {
+                "success": True, 
+                "notes": user.get("notes", []), 
+                "inf_text": user.get("inf_text", "")
+            }
+        return {"success": True, "notes": [], "inf_text": ""}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
